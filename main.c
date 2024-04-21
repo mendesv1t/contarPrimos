@@ -6,12 +6,12 @@
 /* Valor global do programa, em que as threads irão verificar se são primos ou não
  * e a cada passagem dos locks, incrementar o próximo para a próxima thread executar
  */
-int numero = 0;
+long long int numero = 0;
 
 /* Resultado global da contagem de primos, onde cada thread irá somar 1 se o valor
  * que ela analisou for primo, ou 0 se não for, incrementado a cada retorno das threads.
  */
-int qtdPrimos = 0;
+long long int qtdPrimos = 0;
 
 long long int N;
 
@@ -41,7 +41,7 @@ void * tarefa(void * arg) {
     int id = *(int *) arg;
     printf("Thread: %d esta executando...\n", id);
 
-    if (numero != N) {
+    while (numero != N) {
         pthread_mutex_lock(&mutex);
         qtdPrimos += ehPrimo(numero);
         numero++;
@@ -58,6 +58,8 @@ void criarThreads(int M) {
     pthread_t tid[M];
     int t, id[M];
 
+    //--inicilaiza o mutex (lock de exclusao mutua)
+    pthread_mutex_init(&mutex, NULL);
 
     for(int t=0; t<M; t++) {
         id[t]=t;
@@ -71,6 +73,7 @@ void criarThreads(int M) {
             printf("--ERRO: pthread_join() \n"); exit(-1);
         }
     }
+
     pthread_mutex_destroy(&mutex);
 }
 
@@ -85,10 +88,7 @@ int main(int argc, char*argv[]) {
     N = atoll(argv[1]);
     int M = atoi(argv[2]);
 
-    //--inicilaiza o mutex (lock de exclusao mutua)
-    pthread_mutex_init(&mutex, NULL);
     criarThreads(M);
-    pthread_mutex_destroy(&mutex);
 
     printf("%lld\n", numero);
     printf("%lld\n", qtdPrimos);
