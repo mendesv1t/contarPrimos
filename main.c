@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <pthread.h>
+#include "timer.h"
 
 /* Valor global do programa, em que as threads irão verificar se são primos ou não
  * e a cada passagem dos locks, incrementar o próximo para a próxima thread executar
@@ -17,6 +18,42 @@ long long int N;
 
 pthread_mutex_t mutex; //variavel de lock para exclusao mutua
 
+// estrutura auxiliar para montar resultados para um csv:
+typedef struct {
+    long long int N;
+    int qtdThreads;
+    double aceleracao;
+    double eficiencia;
+    double tempoExecucao;
+    double tempoSequencial;
+} Experimento;
+
+//método para extrair resultados para análise em um csv, dada uma lista de experimentos
+void extrairCsv(Experimento * experimento, char * nomeArquivo) {
+
+    FILE * resultados;
+    resultados = fopen(nomeArquivo, "r");
+
+    if (!resultados) {
+        resultados = fopen(nomeArquivo, "a");
+        fprintf(resultados, "qtdNumeros;qtdThreads;aceleracao;eficiencia;tempoExecucao;tempoSequencial\n");
+        //escreve os experimento resultantes do experimento em uma linha:
+        fprintf(resultados,"%lld;%d;%f;%f;%f;%f\n", experimento->N, experimento->qtdThreads, experimento->aceleracao, experimento->eficiencia,
+                experimento->tempoExecucao, experimento->tempoSequencial);
+    } else {
+        resultados = fopen(nomeArquivo, "a");
+        //escreve os experimento resultantes do experimento em uma linha:
+        fprintf(resultados,"%lld;%d;%f;%f;%f;%f\n", experimento->N, experimento->qtdThreads, experimento->aceleracao, experimento->eficiencia,
+                experimento->tempoExecucao, experimento->tempoSequencial);
+    }
+
+    if (!resultados) {
+        fprintf(stderr, "Erro ao criar arquivo csv\n");
+        return;
+    }
+
+    fclose(resultados);
+}
 
 int ehPrimo(long long int n) {
     int i;
@@ -28,18 +65,7 @@ int ehPrimo(long long int n) {
     return 1;
 }
 
-int contarPrimosSequencial(int N) {
-    int qtdPrimos = 0;
-    for (long long int i = 0; i<N;i++) {
-        qtdPrimos += ehPrimo(i);
-    }
-    return qtdPrimos;
-}
-
 void * tarefa(void * arg) {
-
-    int id = *(int *) arg;
-    printf("Thread: %d esta executando...\n", id);
 
     while (numero != N && numero < N) {
         pthread_mutex_lock(&mutex);
@@ -47,8 +73,6 @@ void * tarefa(void * arg) {
         numero++;
         pthread_mutex_unlock(&mutex);
     }
-
-    printf("Thread : %d terminou!\n", id);
     pthread_exit(NULL);
 }
 
@@ -62,7 +86,6 @@ void criarThreads(int M) {
     pthread_mutex_init(&mutex, NULL);
 
     for(int t=0; t<M; t++) {
-
         id[t]=t;
         if (pthread_create(&tid[t], NULL, tarefa, (void *) &id[t])) {
             printf("--ERRO: pthread_create()\n"); exit(-1);
@@ -78,6 +101,44 @@ void criarThreads(int M) {
     pthread_mutex_destroy(&mutex);
 }
 
+
+// método para realizar 3 processamentos do produto de duas matrizes, onde,
+// dada uma quantidade M de threads, realiza produto sequencial e em seguida o concorrente 3 vezes;
+// A partir disso, extrai a aceleração e eficiencia do uso das threads para um arquivo csv.
+int geraResultados(int M, long long int N) {
+
+    double inicio, fim;
+
+    GET_TIME(inicio);
+    criarThreads(1);
+    GET_TIME(fim);
+    double tempoSequencial = fim - inicio;
+
+    double tempoMedioConcorrente = 0;
+    int numNucleos = 4;
+
+    for (int i = 0; i<5; i++) {
+        GET_TIME(inicio);
+        criarThreads(M);
+        GET_TIME(fim);
+        //extrai tempo médio de processamento
+        tempoMedioConcorrente += (fim - inicio)/5;
+    }
+    printf("Tempo decorrido (Concorrente): %f segundos\nContagem de primalidade em %lld números com %d threads\n", tempoMedioConcorrente, N, M);
+
+    Experimento * exp = malloc(sizeof (Experimento));
+    exp->tempoExecucao = tempoMedioConcorrente;
+    exp->aceleracao = tempoSequencial/exp->tempoExecucao;
+    exp->eficiencia = exp->aceleracao/numNucleos;
+    exp->qtdThreads = M;
+    exp->N = N;
+    exp->tempoSequencial = tempoSequencial;
+    extrairCsv(exp, "tempoConcorrente.csv");
+    free(exp);
+
+    return 0;
+}
+
 int main(int argc, char*argv[]) {
 
     //recebe os argumentos de entrada
@@ -89,10 +150,15 @@ int main(int argc, char*argv[]) {
     N = atoll(argv[1]);
     int M = atoi(argv[2]);
 
-    criarThreads(M);
+    //double inicio, fim, tempoTotal;
+    //GET_TIME(inicio);
+    //criarThreads(M);
+    //GET_TIME(fim);
+    //tempoTotal = fim - inicio;
+    //printf("Tempo decorrido (Concorrente): %f segundos\nContagem de primalidade em %d números com %d threads\n", tempoTotal, N, M);
 
-    printf("%lld\n", numero);
-    printf("%lld\n", qtdPrimos);
+    geraResultados(M, N);
+
     /*
      * toDo:
         Roteiro
