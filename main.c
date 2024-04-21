@@ -41,7 +41,7 @@ void * tarefa(void * arg) {
     int id = *(int *) arg;
     printf("Thread: %d esta executando...\n", id);
 
-    while (numero != N) {
+    while (numero != N && numero < N) {
         pthread_mutex_lock(&mutex);
         qtdPrimos += ehPrimo(numero);
         numero++;
@@ -58,10 +58,11 @@ void criarThreads(int M) {
     pthread_t tid[M];
     int t, id[M];
 
-    //--inicilaiza o mutex (lock de exclusao mutua)
+    //--inicializa o mutex (lock de exclusao mutua)
     pthread_mutex_init(&mutex, NULL);
 
     for(int t=0; t<M; t++) {
+
         id[t]=t;
         if (pthread_create(&tid[t], NULL, tarefa, (void *) &id[t])) {
             printf("--ERRO: pthread_create()\n"); exit(-1);
