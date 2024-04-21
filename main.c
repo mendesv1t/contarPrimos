@@ -1,5 +1,22 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
+#include <pthread.h>
+
+/* Valor global do programa, em que as threads irão verificar se são primos ou não
+ * e a cada passagem dos locks, incrementar o próximo para a próxima thread executar
+ */
+int numero = 0;
+
+/* Resultado global da contagem de primos, onde cada thread irá somar 1 se o valor
+ * que ela analisou for primo, ou 0 se não for, incrementado a cada retorno das threads.
+ */
+int qtdPrimos = 0;
+
+long long int N;
+
+pthread_mutex_t mutex; //variavel de lock para exclusao mutua
+
 
 int ehPrimo(long long int n) {
     int i;
@@ -11,8 +28,70 @@ int ehPrimo(long long int n) {
     return 1;
 }
 
+int contarPrimosSequencial(int N) {
+    int qtdPrimos = 0;
+    for (long long int i = 0; i<N;i++) {
+        qtdPrimos += ehPrimo(i);
+    }
+    return qtdPrimos;
+}
 
-int main(void) {
+void * tarefa(void * arg) {
+
+    int id = *(int *) arg;
+    printf("Thread: %d esta executando...\n", id);
+
+    if (numero != N) {
+        pthread_mutex_lock(&mutex);
+        qtdPrimos += ehPrimo(numero);
+        numero++;
+        pthread_mutex_unlock(&mutex);
+    }
+
+    printf("Thread : %d terminou!\n", id);
+    pthread_exit(NULL);
+}
+
+void criarThreads(int M) {
+
+    // recuperando o id das threads no sistema:
+    pthread_t tid[M];
+    int t, id[M];
+
+
+    for(int t=0; t<M; t++) {
+        id[t]=t;
+        if (pthread_create(&tid[t], NULL, tarefa, (void *) &id[t])) {
+            printf("--ERRO: pthread_create()\n"); exit(-1);
+        }
+    }
+    //--espera todas as threads terminarem
+    for (t=0; t<M; t++) {
+        if (pthread_join(tid[t], NULL)) {
+            printf("--ERRO: pthread_join() \n"); exit(-1);
+        }
+    }
+    pthread_mutex_destroy(&mutex);
+}
+
+int main(int argc, char*argv[]) {
+
+    //recebe os argumentos de entrada
+    if(argc < 2) {
+        fprintf(stderr, "Digite: ./main <QtdNumerosParaAnalisarPrimalidade> <QtdThreads>\n");
+        return 2;
+    }
+
+    N = atoll(argv[1]);
+    int M = atoi(argv[2]);
+
+    //--inicilaiza o mutex (lock de exclusao mutua)
+    pthread_mutex_init(&mutex, NULL);
+    criarThreads(M);
+    pthread_mutex_destroy(&mutex);
+
+    printf("%lld\n", numero);
+    printf("%lld\n", qtdPrimos);
     /*
      * toDo:
         Roteiro
