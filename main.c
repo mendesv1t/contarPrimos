@@ -68,9 +68,16 @@ int ehPrimo(long long int n) {
 void * tarefa(void * arg) {
 
     while (numero != N && numero < N) {
+
         pthread_mutex_lock(&mutex);
-        qtdPrimos += ehPrimo(numero);
+        long long int n = numero;
         numero++;
+        pthread_mutex_unlock(&mutex);
+
+        int primo = ehPrimo(n);
+
+        pthread_mutex_lock(&mutex);
+        qtdPrimos += primo;
         pthread_mutex_unlock(&mutex);
     }
     pthread_exit(NULL);
@@ -102,9 +109,6 @@ void criarThreads(int M) {
 }
 
 
-// método para realizar 3 processamentos do produto de duas matrizes, onde,
-// dada uma quantidade M de threads, realiza produto sequencial e em seguida o concorrente 3 vezes;
-// A partir disso, extrai a aceleração e eficiencia do uso das threads para um arquivo csv.
 int geraResultados(int M, long long int N) {
 
     double inicio, fim;
@@ -118,6 +122,8 @@ int geraResultados(int M, long long int N) {
     int numNucleos = 4;
 
     for (int i = 0; i<5; i++) {
+        numero = 0;
+        qtdPrimos = 0;
         GET_TIME(inicio);
         criarThreads(M);
         GET_TIME(fim);
