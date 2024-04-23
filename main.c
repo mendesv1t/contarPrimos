@@ -156,14 +156,14 @@ int main(int argc, char*argv[]) {
     N = atoll(argv[1]);
     int M = atoi(argv[2]);
 
-    //double inicio, fim, tempoTotal;
-    //GET_TIME(inicio);
-    //criarThreads(M);
-    //GET_TIME(fim);
-    //tempoTotal = fim - inicio;
-    //printf("Tempo decorrido (Concorrente): %f segundos\nContagem de primalidade em %d números com %d threads\n", tempoTotal, N, M);
+    double inicio, fim, tempoTotal;
+    GET_TIME(inicio);
+    criarThreads(M);
+    GET_TIME(fim);
+    tempoTotal = fim - inicio;
+    printf("Tempo decorrido (Concorrente): %f segundos\nContagem de primalidade em %d números com %d threads\n", tempoTotal, N, M);
 
-    geraResultados(M, N);
+    //geraResultados(M, N);
 
     /*
      * toDo:
